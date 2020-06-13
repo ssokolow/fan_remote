@@ -514,6 +514,7 @@ version = "0.1.0"
 dependencies = [
  "actix-rt",
  "actix-web",
+ "actix-web-codegen",
 ]
 
 [[package]]
