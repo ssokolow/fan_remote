@@ -1,0 +1,21 @@
+protocol unix,inet
+
+include /etc/firejail/generic.profile
+
+# If I were running a Firejail newer than what comes with a 2016 Kubuntu LTS,
+# I should be able to just whitelist the game install directory like I
+# did the save directory rather than having to trim away my non-standard,
+# non-read-only additions outside $HOME
+blacklist /backups
+blacklist /media
+blacklist /mnt
+blacklist /opt
+blacklist /srv
+blacklist /user_opt
+shell none
+
+nogroups
+private-etc group,hostname,localtime
+private-tmp
+
+read-only /home

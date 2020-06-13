@@ -4,11 +4,11 @@ use std::process::Command;
 
 use actix_web::{error, middleware, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web::dev::RequestHead;
-use actix_web_codegen::{get, post};
+use actix_web::guard::fn_guard;
 use chrono::Local;
 use gumdrop::Options;
+use ipnetwork::IpNetwork;
 use notify_rust::{Hint, Notification};
-use pnet::datalink;
 use thiserror::Error;
 
 // --- Argument Parsing ---
@@ -117,22 +117,7 @@ impl fmt::Display for BottleRocketError {
 }
 impl error::ResponseError for BottleRocketError {}
 
-/// A guard to prevent routes from being accessible outside one of the local subnets
-fn requesting_ip_guard(req: &RequestHead) -> bool {
-    if let Some(peer_addr) = req.peer_addr {
-        for iface in datalink::interfaces() {
-            for ipnet in iface.ips {
-                if ipnet.contains(peer_addr.ip()) {
-                    return true;
-                }
-            }
-        }
-    }
-    false
-}
-
 /// Barebones GET route to provide a "Turn Off Fan" button
-#[get("/", guard="requesting_ip_guard")]
 async fn control_panel() -> impl Responder {
     HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
@@ -162,7 +147,6 @@ async fn control_panel() -> impl Responder {
 }
 
 /// POST route to get called by the "Turn Off Fan" button
-#[post("/fan_off", guard="requesting_ip_guard")]
 async fn fan_off(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
     // Display a persistent notification so surprise fan_off commands can be diagnosed
     if let Err(err) = Notification::new()
@@ -199,13 +183,22 @@ async fn fan_off(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
 async fn main() -> std::io::Result<()> {
     let opts = CmdArgs::parse_args_default_or_exit();
 
+    // TODO: Un-hardcode the guard mask and pass it in via a command-line argument
+    let requesting_ip_guard = |req: &RequestHead| {
+        if let Some(peer_addr) = req.peer_addr {
+            let ipnet: IpNetwork = "192.168.0.0/24".parse().expect("Parsed constant IpNetwork");
+            return ipnet.contains(peer_addr.ip())
+        }
+        false
+    };
+
     let port = opts.port;
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::NormalizePath)
             .data(opts.clone())
-            .service(control_panel)
-            .service(fan_off)
+            .route("/", web::get().guard(fn_guard(requesting_ip_guard)).to(control_panel))
+            .route("/fan_off", web::post().guard(fn_guard(requesting_ip_guard)).to(fan_off))
     })
     .bind(("0.0.0.0", port))?
     .run()

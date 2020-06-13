@@ -9,12 +9,11 @@ edition = "2018"
 [dependencies]
 actix-web = "2.0"
 actix-rt = "1.0"
-actix-web-codegen = "0.2.2"
 gumdrop = "0.8.0"
 thiserror = "1.0.19"
 notify-rust = "4.0.0"
 chrono = "0.4.11"
-pnet = "0.26.0"
+ipnetwork = "0.16.0"
 
 [profile.dev.package."*"]
 # Set the default for dependencies in Development mode.
