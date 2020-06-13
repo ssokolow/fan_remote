@@ -1,12 +1,18 @@
+use std::{fmt, io};
 use std::path::Path;
+use std::process::Command;
 
-use actix_web::{web, App, HttpRequest, HttpServer, Responder};
+use actix_web::{error, middleware, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::dev::RequestHead;
 use actix_web_codegen::{get, post};
+use chrono::Local;
 use gumdrop::Options;
+use notify_rust::{Hint, Notification};
 use thiserror::Error;
 
 // --- Argument Parsing ---
 
+/// Error enum for command-line argument validation errors
 #[derive(Error, Debug)]
 pub enum CmdArgError {
     #[error("Path doesn't exist or is not a file: {0}")]
@@ -20,6 +26,9 @@ pub enum CmdArgError {
 /// Simple parser that a given path exists to catch typos, since anything fancier
 /// would be much more work for little benefit in a long-running process.
 /// (You need to expect to handle failures at the point of use anyway.)
+///
+/// Gumdrop is an acceptable argument parser in this case, because the only paths it needs to
+/// handle are so unlikely to contain non-UTF8 elements.
 fn parse_path(s: &str) -> Result<String, CmdArgError> {
     let string = s.to_owned();
     let path = Path::new(s);
@@ -30,6 +39,7 @@ fn parse_path(s: &str) -> Result<String, CmdArgError> {
     }
 }
 
+/// Parser/validator for X10 house codes
 fn parse_house_code(s: &str) -> Result<String, CmdArgError> {
     let code = s.to_uppercase();
     if let Some(code_char) = code.chars().next() {
@@ -40,6 +50,7 @@ fn parse_house_code(s: &str) -> Result<String, CmdArgError> {
     Err(CmdArgError::BadHouseCode(s.to_owned()))
 }
 
+/// Parser/validator for X10 device numbers
 fn parse_device_num(s: &str) -> Result<u8, CmdArgError> {
     if let Ok(num) = s.parse() {
         if num >= 1 && num <= 16 {
@@ -63,13 +74,10 @@ struct CmdArgs {
     fc_path: String,
 
     /// X10 house code to pass to BottleRocket
-    /// TODO: Validate that it's in the range A-P
     #[options(meta = "X", default="A", parse(try_from_str = "parse_house_code"))]
     house: String,
 
     /// X10 device number for "Turn off fan" button
-    ///
-    /// TODO: Validate that it's in the range 1-16
     #[options(meta = "N", default="1", parse(try_from_str = "parse_device_num"))]
     fan_id: u8,
 
@@ -84,14 +92,92 @@ struct CmdArgs {
 
 // --- HTTP Server ---
 
-#[get("/")]
-async fn control_panel(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
-    "TODO: Implement a control panel"
+#[derive(Debug)]
+enum BottleRocketErrorKind {
+    SpawnFailure,
+    ReturnedFailure,
 }
 
+/// Error type for failures to call BottleRocket as a subprocess
+#[derive(Error, Debug)]
+struct BottleRocketError {
+    kind: BottleRocketErrorKind,
+    source: io::Error,
+}
+
+impl fmt::Display for BottleRocketError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Failed to ask for the fan to be turned off: {}",
+        match self.kind {
+            BottleRocketErrorKind::SpawnFailure => "Couldn't call BottleRocket",
+            BottleRocketErrorKind::ReturnedFailure => "BottleRocket reported failure",
+        })
+    }
+}
+impl error::ResponseError for BottleRocketError {}
+
+/// Barebones GET route to provide a "Turn Off Fan" button
+#[get("/")]
+async fn control_panel() -> impl Responder {
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(r#"
+    <!DOCTYPE html>
+    <html lang="en">
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width" />
+
+            <title>Remote Control</title>
+            <style>
+                body {
+                    margin: 1em;
+                    text-align: center;
+                }
+            </style>
+        </head>
+        <body>
+            <form method="POST" action="/fan_off">
+                <input type="submit" value="Turn Off Fan" />
+            </form>
+        </body>
+    </html>
+
+    "#)
+}
+
+/// POST route to get called by the "Turn Off Fan" button
 #[post("/fan_off")]
 async fn fan_off(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
-    "TODO: Call bottlerocket to turn off fan"
+    // Display a persistent notification so surprise fan_off commands can be diagnosed
+    if let Err(err) = Notification::new()
+            .summary("Hall Fan Stopped")
+            .body(&format!("A user at IP address {} requested that the fan be turned off at {}.",
+                req.peer_addr().map(|adr| adr.ip().to_string()).unwrap_or("<unknown>".to_owned()),
+                Local::now().format("%H:%M")))
+            .icon("application-exit")
+            .appname("fan_remote")
+            .hint(Hint::Resident(true))
+            .timeout(0)
+            .show() {
+
+        // TODO: Logging at https://actix.rs/docs/middleware/
+        eprintln!("Failed to display notification for fan_off: {}", err);
+    }
+
+    // Shell out to BottleRocket in as secure a manner as possible to control fan via X10
+    // (Trusts the CLI argument parser to have validated the non-constant parts)
+    let (fan_id_string, repeats_string) = (&data.fan_id.to_string(), &data.repeats.to_string());
+    Command::new(&data.br_path)
+        .args(&["-x", &data.fc_path,
+            "-c", &data.house,
+            "-f", &fan_id_string,
+            "-r", &repeats_string])
+        .spawn()
+        .map_err(|e| BottleRocketError { kind: BottleRocketErrorKind::SpawnFailure, source: e })?
+        .wait()
+        .map_err(|e| BottleRocketError { kind: BottleRocketErrorKind::ReturnedFailure, source: e })
+        .map(|_| "X10 doesn't support confirming, but the fan should be off now.")
 }
 
 #[actix_rt::main]
@@ -101,6 +187,7 @@ async fn main() -> std::io::Result<()> {
     let port = opts.port;
     HttpServer::new(move || {
         App::new()
+            .wrap(middleware::NormalizePath)
             .data(opts.clone())
             .service(control_panel)
             .service(fan_off)

@@ -12,6 +12,8 @@ actix-rt = "1.0"
 actix-web-codegen = "0.2.2"
 gumdrop = "0.8.0"
 thiserror = "1.0.19"
+notify-rust = "4.0.0"
+chrono = "0.4.11"
 
 [profile.dev.package."*"]
 # Set the default for dependencies in Development mode.
