@@ -8,6 +8,7 @@ use actix_web_codegen::{get, post};
 use chrono::Local;
 use gumdrop::Options;
 use notify_rust::{Hint, Notification};
+use pnet::datalink;
 use thiserror::Error;
 
 // --- Argument Parsing ---
@@ -116,8 +117,22 @@ impl fmt::Display for BottleRocketError {
 }
 impl error::ResponseError for BottleRocketError {}
 
+/// A guard to prevent routes from being accessible outside one of the local subnets
+fn requesting_ip_guard(req: &RequestHead) -> bool {
+    if let Some(peer_addr) = req.peer_addr {
+        for iface in datalink::interfaces() {
+            for ipnet in iface.ips {
+                if ipnet.contains(peer_addr.ip()) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
 /// Barebones GET route to provide a "Turn Off Fan" button
-#[get("/")]
+#[get("/", guard="requesting_ip_guard")]
 async fn control_panel() -> impl Responder {
     HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
@@ -147,7 +162,7 @@ async fn control_panel() -> impl Responder {
 }
 
 /// POST route to get called by the "Turn Off Fan" button
-#[post("/fan_off")]
+#[post("/fan_off", guard="requesting_ip_guard")]
 async fn fan_off(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
     // Display a persistent notification so surprise fan_off commands can be diagnosed
     if let Err(err) = Notification::new()
@@ -192,7 +207,7 @@ async fn main() -> std::io::Result<()> {
             .service(control_panel)
             .service(fan_off)
     })
-    .bind(("127.0.0.1", port))?
+    .bind(("0.0.0.0", port))?
     .run()
     .await
 }
