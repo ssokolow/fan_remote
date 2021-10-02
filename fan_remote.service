@@ -1,17 +1,14 @@
 [Unit]
 Description=Server to allow my fan to be turned off remotely
-After=network-online.target
-Wants=network-online.target
+After=network.target
+Wants=network.target
 
 # NOTE: Remember to check this file after making changes:
 #   sudo ./install.sh; systemd-analyze security fan_remote.service
-#
-# TODO: Rewrite daemon to operate based on service activation so more network
-#       whitelisting is possible
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/fan_remote -p23734 -F2
+ExecStart=/usr/local/bin/fan_remote -F2
 
 BindPaths=/dev/ttyS0
 BindReadOnlyPaths=/usr/local/bin/fan_remote
@@ -21,16 +18,14 @@ DevicePolicy=closed
 DeviceAllow=/dev/ttyS0
 DynamicUser=yes
 Environment=
-# All irrelevant paths not covered by Private* options that the FHS says we
-# should be able to rely on existing (systemd will error out if one doesn't)
-InaccessiblePaths=/boot /etc /media /mnt /opt /run /sbin /srv /usr/include /usr/libexec /usr/sbin /usr/share /usr/src /var
-IPAddressAllow=192.168.0.0/24
+ExecPaths=/bin /usr/bin /usr/local/bin
 IPAddressDeny=any
 KeyringMode=private
 LockPersonality=yes
 MemoryDenyWriteExecute=yes
 MemoryMax=512M
 Nice=10
+NoExecPaths=/
 NoNewPrivileges=yes
 PassEnvironment=
 PrivateDevices=yes
@@ -38,6 +33,7 @@ PrivateIPC=yes
 ProcSubset=pid
 ProtectProc=invisible
 PrivateMounts=yes
+PrivateNetwork=yes
 PrivateTmp=yes
 PrivateUsers=yes
 ProtectClock=yes
@@ -51,11 +47,10 @@ ProtectSystem=strict
 ReadOnlyPaths=/usr/bin/br
 ReadOnlyDirectories=/usr
 RemoveIPC=yes
-RestrictAddressFamilies=AF_INET AF_INET6
+RestrictAddressFamilies=none
 RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes
-SocketBindAllow=ipv4:tcp:23734
 SocketBindDeny=any
 SupplementaryGroups=dialout
 SystemCallArchitectures=native
@@ -64,6 +59,17 @@ SystemCallFilter=@system-service
 SystemCallFilter=~@privileged @resources
 TemporaryFileSystem=/usr/local:ro /usr/local/bin:ro
 UMask=0077
+
+# All irrelevant paths not covered by Private* options that the FHS says we
+# should be able to rely on existing (systemd will error out if one doesn't)
+InaccessiblePaths=/boot /etc /media /mnt /opt /run /sbin /srv /usr/include /usr/libexec /usr/sbin /usr/share /usr/src /var
+
+# Remaining `systemd-analyze security` concerns:
+# - DeviceAllow=/dev/ttyS0 is needed to access X10
+# - SupplementaryGroups=dialout is needed to access X10
+# - RootDirectory/RootImage would require building a containerized image
+#   for /usr/bin/br to access X10.
+# - I have no idea why ProtectClock is being reported as not set
 
 [Install]
 WantedBy=multi-user.target

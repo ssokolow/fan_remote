@@ -4,11 +4,9 @@ use std::process::Command;
 
 use actix_web::{error, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web::middleware::{NormalizePath, normalize::TrailingSlash};
-use actix_web::dev::RequestHead;
-use actix_web::guard::fn_guard;
 use chrono::Local;
 use gumdrop::Options;
-use ipnetwork::IpNetwork;
+use listenfd::ListenFd;
 use notify_rust::{Hint, Notification};
 use thiserror::Error;
 
@@ -150,11 +148,12 @@ async fn control_panel() -> impl Responder {
 /// POST route to get called by the "Turn Off Fan" button
 async fn fan_off(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
     // Display a persistent notification so surprise fan_off commands can be diagnosed
-    if let Err(err) = Notification::new()
+    let msg = format!("A user at IP address {} requested that the fan be turned off at {}.",
+        req.peer_addr().map(|adr| adr.ip().to_string()).unwrap_or("<unknown>".to_owned()),
+        Local::now().format("%H:%M"));
+    if let Err(_) = Notification::new()
             .summary("Hall Fan Stopped")
-            .body(&format!("A user at IP address {} requested that the fan be turned off at {}.",
-                req.peer_addr().map(|adr| adr.ip().to_string()).unwrap_or("<unknown>".to_owned()),
-                Local::now().format("%H:%M")))
+            .body(&msg)
             .icon("application-exit")
             .appname("fan_remote")
             .hint(Hint::Resident(true))
@@ -162,7 +161,7 @@ async fn fan_off(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
             .show() {
 
         // TODO: Logging at https://actix.rs/docs/middleware/
-        eprintln!("Failed to display notification for fan_off: {}", err);
+        eprintln!("{}", msg);
     }
 
     // Shell out to BottleRocket in as secure a manner as possible to control fan via X10
@@ -184,24 +183,22 @@ async fn fan_off(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
 async fn main() -> std::io::Result<()> {
     let opts = CmdArgs::parse_args_default_or_exit();
 
-    // TODO: Un-hardcode the guard mask and pass it in via a command-line argument
-    let requesting_ip_guard = |req: &RequestHead| {
-        if let Some(peer_addr) = req.peer_addr {
-            let ipnet: IpNetwork = "192.168.0.0/24".parse().expect("Parsed constant IpNetwork");
-            return ipnet.contains(peer_addr.ip())
-        }
-        false
-    };
-
     let port = opts.port;
-    HttpServer::new(move || {
+    let mut server = HttpServer::new(move || {
         App::new()
             .wrap(NormalizePath::new(TrailingSlash::Trim))
             .data(opts.clone())
-            .route("/", web::get().guard(fn_guard(requesting_ip_guard)).to(control_panel))
-            .route("/fan_off", web::post().guard(fn_guard(requesting_ip_guard)).to(fan_off))
-    })
-    .bind(("0.0.0.0", port))?
-    .run()
-    .await
+            .route("/", web::get().to(control_panel))
+            .route("/fan_off", web::post().to(fan_off))
+    });
+
+    // Use listenfd to support systemd socket activation for tighter sandboxing
+    let mut listenfd = ListenFd::from_env();
+    server = if let Some(l) = listenfd.take_tcp_listener(0).unwrap() {
+        server.listen(l)?
+    } else {
+        server.bind(("0.0.0.0", port))?
+    };
+
+    server.run().await
 }

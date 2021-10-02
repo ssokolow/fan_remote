@@ -13,7 +13,7 @@ gumdrop = "0.8.0"
 thiserror = "1.0.29"
 notify-rust = "4.5.3"
 chrono = "0.4.19"
-ipnetwork = "0.18.0"
+listenfd = "0.3.5"
 
 [profile.dev.package."*"]
 # Set the default for dependencies in Development mode.
