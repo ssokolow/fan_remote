@@ -2,7 +2,8 @@ use std::{fmt, io};
 use std::path::Path;
 use std::process::Command;
 
-use actix_web::{error, middleware, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{error, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::middleware::{NormalizePath, normalize::TrailingSlash};
 use actix_web::dev::RequestHead;
 use actix_web::guard::fn_guard;
 use chrono::Local;
@@ -195,7 +196,7 @@ async fn main() -> std::io::Result<()> {
     let port = opts.port;
     HttpServer::new(move || {
         App::new()
-            .wrap(middleware::NormalizePath)
+            .wrap(NormalizePath::new(TrailingSlash::Trim))
             .data(opts.clone())
             .route("/", web::get().guard(fn_guard(requesting_ip_guard)).to(control_panel))
             .route("/fan_off", web::post().guard(fn_guard(requesting_ip_guard)).to(fan_off))
