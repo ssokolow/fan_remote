@@ -144,26 +144,31 @@ async fn control_panel() -> impl Responder {
 }
 
 /// Display a persistent notification so surprise fan_off commands can be diagnosed
-fn notify(ip_address: &str) {
-    let msg = format!("A user at IP address {} requested that the fan be turned off.",
-        ip_address);
+#[cfg(feature = "notify-rust")]
+fn notify(msg: &str) {
     if let Err(_) = notify_rust::Notification::new()
             .summary("Hall Fan Stopped")
-            .body(&msg)
+            .body(msg)
             .icon("application-exit")
             .appname("fan_remote")
             .hint(notify_rust::Hint::Resident(true))
             .timeout(0)
             .show() {
-
-        // TODO: Logging at https://actix.rs/docs/middleware/
-        eprintln!("{}", msg);
+        println!("{}", msg);
     }
+}
+
+/// If built without notify-rust, assume systemd socket activation and notify to stdout
+#[cfg(not(feature = "notify-rust"))]
+fn notify(msg: &str) {
+    println!("{}", msg);
 }
 
 /// POST route to get called by the "Turn Off Fan" button
 async fn fan_off(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
-    notify(&req.peer_addr().map(|adr| adr.ip().to_string()).unwrap_or("<unknown>".to_owned()));
+    let msg = format!("A user at IP address {} requested that the fan be turned off.",
+        req.peer_addr().map(|adr| adr.ip().to_string()).unwrap_or("<unknown>".to_owned()));
+    notify(&msg);
 
     // Shell out to BottleRocket in as secure a manner as possible to control fan via X10
     // (Trusts the CLI argument parser to have validated the non-constant parts)

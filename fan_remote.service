@@ -57,6 +57,7 @@ SystemCallArchitectures=native
 SystemCallErrorNumber=EPERM
 SystemCallFilter=@system-service
 SystemCallFilter=~@privileged @resources
+StandardOutput=journal
 TemporaryFileSystem=/usr/local:ro /usr/local/bin:ro
 UMask=0077
 
