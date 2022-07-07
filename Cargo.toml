@@ -2,7 +2,7 @@
 name = "fan_remote"
 version = "0.1.0"
 authors = ["Stephan Sokolow <http://www.ssokolow.com/ContactMe>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 actix-web = { version = "4.1.0", default-features = false }
