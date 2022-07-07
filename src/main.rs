@@ -4,7 +4,6 @@ use std::process::Command;
 
 use actix_web::{error, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web::middleware::NormalizePath;
-use chrono::Local;
 use gumdrop::Options;
 use listenfd::ListenFd;
 use thiserror::Error;
@@ -146,9 +145,8 @@ async fn control_panel() -> impl Responder {
 
 /// Display a persistent notification so surprise fan_off commands can be diagnosed
 fn notify(ip_address: &str) {
-    let msg = format!("A user at IP address {} requested that the fan be turned off at {}.",
-        ip_address,
-        Local::now().format("%H:%M"));
+    let msg = format!("A user at IP address {} requested that the fan be turned off.",
+        ip_address);
     if let Err(_) = notify_rust::Notification::new()
             .summary("Hall Fan Stopped")
             .body(&msg)

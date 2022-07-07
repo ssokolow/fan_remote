@@ -11,7 +11,6 @@ actix-web = { version = "4.1.0", default-features = false, features = ["macros"]
 gumdrop = "0.8.1"
 thiserror = "1.0.31"
 notify-rust = "4.5.8"
-chrono = "0.4.19"
 listenfd = "1.0.0"
 
 [profile.dev.package."*"]
