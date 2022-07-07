@@ -7,6 +7,13 @@ is_installed() {
     return $?
 }
 
+# Ensure an appropriately minimally-featured release build
+# if we're not root
+if [ "$(id -u)" != 0 ]; then
+    cargo build --release --no-default-features
+    exec sudo "$0" "$@"
+fi
+
 if ! is_installed br; then
     apt-get install bottlerocket
 fi
