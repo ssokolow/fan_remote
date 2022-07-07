@@ -5,7 +5,7 @@ authors = ["Stephan Sokolow <http://www.ssokolow.com/ContactMe>"]
 edition = "2018"
 
 [dependencies]
-actix-web = { version = "4.1.0", default-features = false, features = ["macros"] }
+actix-web = { version = "4.1.0", default-features = false }
 gumdrop = "0.8.1"
 thiserror = "1.0.31"
 notify-rust = { version = "4.5.8", optional = true }

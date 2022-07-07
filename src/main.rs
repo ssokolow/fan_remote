@@ -2,7 +2,7 @@ use std::{fmt, io};
 use std::path::Path;
 use std::process::Command;
 
-use actix_web::{error, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{error, rt, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web::middleware::NormalizePath;
 use gumdrop::Options;
 use listenfd::ListenFd;
@@ -185,8 +185,7 @@ async fn fan_off(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
         .map(|_| "X10 doesn't support confirming, but the fan should be off now.")
 }
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
+fn main() -> std::io::Result<()> {
     let opts = CmdArgs::parse_args_default_or_exit();
 
     let port = opts.port;
@@ -206,5 +205,5 @@ async fn main() -> std::io::Result<()> {
         server.bind(("0.0.0.0", port))?
     };
 
-    server.run().await
+    rt::System::new().block_on(server.run())
 }
