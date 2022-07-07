@@ -7,13 +7,12 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-web = "3.3.2"
-actix-rt = "1.1.1"
-gumdrop = "0.8.0"
-thiserror = "1.0.29"
-notify-rust = "4.5.3"
+actix-web = { version = "4.1.0", default-features = false, features = ["macros"] }
+gumdrop = "0.8.1"
+thiserror = "1.0.31"
+notify-rust = "4.5.8"
 chrono = "0.4.19"
-listenfd = "0.3.5"
+listenfd = "1.0.0"
 
 [profile.dev.package."*"]
 # Set the default for dependencies in Development mode.

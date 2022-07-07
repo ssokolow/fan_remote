@@ -3,11 +3,10 @@ use std::path::Path;
 use std::process::Command;
 
 use actix_web::{error, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
-use actix_web::middleware::{NormalizePath, normalize::TrailingSlash};
+use actix_web::middleware::NormalizePath;
 use chrono::Local;
 use gumdrop::Options;
 use listenfd::ListenFd;
-use notify_rust::{Hint, Notification};
 use thiserror::Error;
 
 // --- Argument Parsing ---
@@ -145,24 +144,28 @@ async fn control_panel() -> impl Responder {
     "#)
 }
 
-/// POST route to get called by the "Turn Off Fan" button
-async fn fan_off(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
-    // Display a persistent notification so surprise fan_off commands can be diagnosed
+/// Display a persistent notification so surprise fan_off commands can be diagnosed
+fn notify(ip_address: &str) {
     let msg = format!("A user at IP address {} requested that the fan be turned off at {}.",
-        req.peer_addr().map(|adr| adr.ip().to_string()).unwrap_or("<unknown>".to_owned()),
+        ip_address,
         Local::now().format("%H:%M"));
-    if let Err(_) = Notification::new()
+    if let Err(_) = notify_rust::Notification::new()
             .summary("Hall Fan Stopped")
             .body(&msg)
             .icon("application-exit")
             .appname("fan_remote")
-            .hint(Hint::Resident(true))
+            .hint(notify_rust::Hint::Resident(true))
             .timeout(0)
             .show() {
 
         // TODO: Logging at https://actix.rs/docs/middleware/
         eprintln!("{}", msg);
     }
+}
+
+/// POST route to get called by the "Turn Off Fan" button
+async fn fan_off(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
+    notify(&req.peer_addr().map(|adr| adr.ip().to_string()).unwrap_or("<unknown>".to_owned()));
 
     // Shell out to BottleRocket in as secure a manner as possible to control fan via X10
     // (Trusts the CLI argument parser to have validated the non-constant parts)
@@ -179,15 +182,15 @@ async fn fan_off(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
         .map(|_| "X10 doesn't support confirming, but the fan should be off now.")
 }
 
-#[actix_rt::main]
+#[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let opts = CmdArgs::parse_args_default_or_exit();
 
     let port = opts.port;
     let mut server = HttpServer::new(move || {
         App::new()
-            .wrap(NormalizePath::new(TrailingSlash::Trim))
-            .data(opts.clone())
+            .wrap(NormalizePath::trim())
+            .app_data(web::Data::new(opts.clone()))
             .route("/", web::get().to(control_panel))
             .route("/fan_off", web::post().to(fan_off))
     });
