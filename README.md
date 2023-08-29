@@ -96,3 +96,26 @@ Here's what `systemd-analyze security` has to say about it as of this writing:
 
 The `✗ ProtectClock=` isn't intended, but I haven't been able to figure out what
 else in the service definition is overriding my `ProtectClock=yes`.
+
+## Reference Materials
+
+If you'd like to make your own systemd services more secure, here are the
+resources I used:
+
+- [Writing a Secure Systemd Service with Sandboxing and Dynamic Users](https://nickb.dev/blog/writing-a-secure-systemd-service-with-sandboxing-and-dynamic-users)
+- [security and hardening options for systemd service units](https://gist.github.com/ageis/f5595e59b1cddb1513d1b425a323db04)
+- [Use TemporaryFileSystem to hide files or directories from systemd services](https://www.sherbers.de/use-temporaryfilesystem-to-hide-files-or-directories-from-systemd-services/)
+
+I also mixed together these for how to do socket activation, since Rust services
+start so quickly and systemd socket activation terminates the connection for
+you, allowing the unit file to omit permission to use any network-related
+syscalls:
+
+- [The End of the Road: systemd’s “Socket” Units](https://www.linux.com/training-tutorials/end-road-systemds-socket-units/)
+- [Systemd socket based activation](https://web.archive.org/web/20210617031521/https://leonardoce.wordpress.com/2015/03/08/systemd-socket-based-activation/)
+- [The `listenfd` crate for Rust](https://lib.rs/crates/listenfd)
+
+...and, if you're a novice at or newcomer to writing unit files, you may find
+this helpful:
+
+- [Understanding Systemd Units and Unit Files](https://www.digitalocean.com/community/tutorials/understanding-systemd-units-and-unit-files)
