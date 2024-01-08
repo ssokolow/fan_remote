@@ -6,7 +6,12 @@ as an HTML form button.
 In its current form, it's highly specialized, but I've put so much work into
 locking down the systemd sandboxing for it that you might find it useful as a
 starting point for creating ultra-sandboxed HTTP daemons that need to invoke
-`/usr/bin/br` or something similar.
+`/usr/local/bin/pycm19a.py` or something similar.
+
+**NOTE:** If you have an X10 Firecracker CM17A, an older version of this project
+with stricter sandboxing is available in the `cm17a` branch. I haven't had time
+to look into how to sandbox `pycm19a.py` more effectively but, if you know how,
+please let me know.
 
 Here's what `systemd-analyze security` has to say about it as of this writing:
 
@@ -26,12 +31,12 @@ Here's what `systemd-analyze security` has to say about it as of this writing:
 ✓ CapabilityBoundingSet=~CAP_RAWIO                            Service has no raw I/O access
 ✓ CapabilityBoundingSet=~CAP_SYS_MODULE                       Service cannot load kernel modules
 ✓ CapabilityBoundingSet=~CAP_SYS_TIME                         Service processes cannot change the system clock
-✗ DeviceAllow=                                                Service has a device ACL with some special devices                                 0.1
+✗ DeviceAllow=                                                Service has no device ACL                                                          0.2
 ✓ IPAddressDeny=                                              Service blocks all IP address ranges
 ✓ KeyringMode=                                                Service doesn't share key material with other services
 ✓ NoNewPrivileges=                                            Service processes cannot acquire new privileges
 ✓ NotifyAccess=                                               Service child processes cannot alter service state
-✓ PrivateDevices=                                             Service has no access to hardware devices
+✗ PrivateDevices=                                             Service potentially has access to hardware devices                                 0.2
 ✓ PrivateMounts=                                              Service cannot install system mounts
 ✓ PrivateTmp=                                                 Service has no access to other software's temporary files
 ✓ PrivateUsers=                                               Service does not have access to other users
@@ -69,7 +74,7 @@ Here's what `systemd-analyze security` has to say about it as of this writing:
 ✓ RestrictRealtime=                                           Service realtime scheduling access is restricted
 ✓ SystemCallFilter=~@cpu-emulation                            System call whitelist defined for service, and @cpu-emulation is not included
 ✓ SystemCallFilter=~@obsolete                                 System call whitelist defined for service, and @obsolete is not included
-✓ RestrictAddressFamilies=~AF_NETLINK                         Service cannot allocate netlink sockets
+✗ RestrictAddressFamilies=~AF_NETLINK                         Service may allocate netlink sockets                                               0.1
 ✗ RootDirectory=/RootImage=                                   Service runs within the host's root directory                                      0.1
 ✗ SupplementaryGroups=                                        Service runs with supplementary groups                                             0.1
 ✓ CapabilityBoundingSet=~CAP_MAC_*                            Service cannot adjust SMACK MAC
@@ -91,11 +96,11 @@ Here's what `systemd-analyze security` has to say about it as of this writing:
 ✓ CapabilityBoundingSet=~CAP_WAKE_ALARM                       Service cannot program timers that wake up the system
 ✓ RestrictAddressFamilies=~AF_UNIX                            Service cannot allocate local sockets
 
-→ Overall exposure level for fan_remote.service: 0.4 SAFE 😀
+→ Overall exposure level for fan_remote.service: 0.7 SAFE 😀
 ```
 
-The `✗ ProtectClock=` isn't intended, but I haven't been able to figure out what
-else in the service definition is overriding my `ProtectClock=yes`.
+Again, if you can figure out how to set a `/dev` ACL without breaking the use of
+libusb to talk to the CM19A, please let me know.
 
 ## Reference Materials
 

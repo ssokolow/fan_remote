@@ -30,7 +30,7 @@ pub enum CmdArgError {
 fn parse_path(s: &str) -> Result<String, CmdArgError> {
     let string = s.to_owned();
     let path = Path::new(s);
-    if path.exists() && !path.is_dir() { // is_file() would false out on /dev/ttyS0
+    if path.exists() && !path.is_dir() { // is_file() would false out on device nodes
         Ok(string)
     } else {
         Err(CmdArgError::BadPath(string))
@@ -63,15 +63,12 @@ struct CmdArgs {
     /// Show this help output
     help: bool,
 
-    /// Path to the BottleRocket binary
-    #[options(meta = "PATH", default = "/usr/bin/br", parse(try_from_str = "parse_path"))]
-    br_path: String,
+    /// Path to the PyCM19A binary
+    #[options(meta = "PATH", default = "/usr/local/bin/pycm19a.py",
+        parse(try_from_str = "parse_path"))]
+    pycm19a_path: String,
 
-    /// Path to the X10 Firecracker's serial port
-    #[options(meta = "PATH", default="/dev/ttyS0", parse(try_from_str = "parse_path"))]
-    fc_path: String,
-
-    /// X10 house code to pass to BottleRocket
+    /// X10 house code to pass to PyCM19A
     #[options(meta = "X", default="A", parse(try_from_str = "parse_house_code"))]
     house: String,
 
@@ -91,28 +88,28 @@ struct CmdArgs {
 // --- HTTP Server ---
 
 #[derive(Debug)]
-enum BottleRocketErrorKind {
+enum PyCM19AErrorKind {
     SpawnFailure,
     ReturnedFailure,
 }
 
-/// Error type for failures to call BottleRocket as a subprocess
+/// Error type for failures to call PyCM19A as a subprocess
 #[derive(Error, Debug)]
-struct BottleRocketError {
-    kind: BottleRocketErrorKind,
+struct PyCM19AError {
+    kind: PyCM19AErrorKind,
     source: io::Error,
 }
 
-impl fmt::Display for BottleRocketError {
+impl fmt::Display for PyCM19AError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Failed to ask for the fan to be turned off: {}",
         match self.kind {
-            BottleRocketErrorKind::SpawnFailure => "Couldn't call BottleRocket",
-            BottleRocketErrorKind::ReturnedFailure => "BottleRocket reported failure",
+            PyCM19AErrorKind::SpawnFailure => "Couldn't call PyCM19A",
+            PyCM19AErrorKind::ReturnedFailure => "PyCM19A reported failure",
         })
     }
 }
-impl error::ResponseError for BottleRocketError {}
+impl error::ResponseError for PyCM19AError {}
 
 /// Barebones GET route to provide a "Turn Off Fan" button
 async fn control_panel() -> impl Responder {
@@ -170,19 +167,18 @@ async fn fan_off(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
         req.peer_addr().map(|adr| adr.ip().to_string()).unwrap_or("<unknown>".to_owned()));
     notify(&msg);
 
-    // Shell out to BottleRocket in as secure a manner as possible to control fan via X10
+    // Shell out to PyCM19A in as secure a manner as possible to control fan via X10
     // (Trusts the CLI argument parser to have validated the non-constant parts)
-    let (fan_id_string, repeats_string) = (&data.fan_id.to_string(), &data.repeats.to_string());
-    Command::new(&data.br_path)
-        .args(&["-x", &data.fc_path,
-            "-c", &data.house,
-            "-f", &fan_id_string,
-            "-r", &repeats_string])
-        .spawn()
-        .map_err(|e| BottleRocketError { kind: BottleRocketErrorKind::SpawnFailure, source: e })?
-        .wait()
-        .map_err(|e| BottleRocketError { kind: BottleRocketErrorKind::ReturnedFailure, source: e })
-        .map(|_| "X10 doesn't support confirming, but the fan should be off now.")
+    for _ in 0..data.repeats {
+        Command::new("python3")
+            .arg(&data.pycm19a_path)
+            .arg(format!("-{}{}", data.house, data.fan_id))
+            .spawn()
+            .map_err(|e| PyCM19AError { kind: PyCM19AErrorKind::SpawnFailure, source: e })?
+            .wait()
+            .map_err(|e| PyCM19AError { kind: PyCM19AErrorKind::ReturnedFailure, source: e })?;
+    }
+    Ok::<&str, PyCM19AError>("X10 doesn't support confirming, but the fan should be off now.")
 }
 
 fn main() -> std::io::Result<()> {

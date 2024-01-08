@@ -8,14 +8,14 @@ Wants=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/fan_remote -F2
+ExecStart=/usr/local/bin/fan_remote -f2
 
-BindPaths=/dev/ttyS0
-BindReadOnlyPaths=/usr/local/bin/fan_remote
+#BindPaths=/dev/bus/usb
+BindReadOnlyPaths=/usr/local/bin/fan_remote /usr/local/bin/pycm19a.py
 CapabilityBoundingSet=
 CPUQuota=20%
-DevicePolicy=closed
-DeviceAllow=/dev/ttyS0
+#DevicePolicy=closed
+DeviceAllow=char-usb/* char-usb_device/*
 DynamicUser=yes
 Environment=
 ExecPaths=/bin /usr/bin /usr/local/bin
@@ -28,7 +28,7 @@ Nice=10
 NoExecPaths=/
 NoNewPrivileges=yes
 PassEnvironment=
-PrivateDevices=yes
+#PrivateDevices=yes
 PrivateIPC=yes
 ProcSubset=pid
 ProtectProc=invisible
@@ -36,7 +36,6 @@ PrivateMounts=yes
 PrivateNetwork=yes
 PrivateTmp=yes
 PrivateUsers=yes
-ProtectClock=yes
 ProtectControlGroups=yes
 ProtectHome=yes
 ProtectHostname=yes
@@ -44,10 +43,10 @@ ProtectKernelLogs=yes
 ProtectKernelModules=yes
 ProtectKernelTunables=yes
 ProtectSystem=strict
-ReadOnlyPaths=/usr/bin/br
+ReadOnlyPaths=/usr/bin/python3
 ReadOnlyDirectories=/usr
 RemoveIPC=yes
-RestrictAddressFamilies=none
+RestrictAddressFamilies=AF_NETLINK
 RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes
@@ -63,14 +62,16 @@ UMask=0077
 
 # All irrelevant paths not covered by Private* options that the FHS says we
 # should be able to rely on existing (systemd will error out if one doesn't)
-InaccessiblePaths=/boot /etc /media /mnt /opt /run /sbin /srv /usr/include /usr/libexec /usr/sbin /usr/share /usr/src /var
+InaccessiblePaths=/boot /etc /media /mnt /opt /sbin /srv /usr/include /usr/libexec /usr/sbin /usr/share /usr/src /var
 
 # Remaining `systemd-analyze security` concerns:
-# - DeviceAllow=/dev/ttyS0 is needed to access X10
-# - SupplementaryGroups=dialout is needed to access X10
-# - RootDirectory/RootImage would require building a containerized image
-#   for /usr/bin/br to access X10.
-# - I have no idea why ProtectClock is being reported as not set
+# - I haven't figured out what DeviceAllow I'm missing to get libusb to work
+#   with DevicePolicy=closed and PrivateDevices=yes
+# - ProtectClock=yes would block libusb from working
+# - RestrictAddressFamilies=AF_NETLINK is needed for libusb to work
+# - RootDirectory/RootImage would require re-implementing pycm19a.py in Rust
+#   or building a container image with Python for cm19a.py to access X10.
+# - SupplementaryGroups=dialout is what I permissioned the CM19A dev node to
 
 [Install]
 WantedBy=multi-user.target

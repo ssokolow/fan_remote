@@ -14,8 +14,8 @@ if [ "$(id -u)" != 0 ]; then
     exec sudo "$0" "$@"
 fi
 
-if ! is_installed br; then
-    apt-get install bottlerocket
+if ! is_installed pycm19a.py; then
+    echo "WARNING: You must install pycm19a.py from https://github.com/burnsfisher/x10pantilt to /usr/local/bin/"
 fi
 
 # Copy the server binary into place

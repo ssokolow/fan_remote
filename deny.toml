@@ -1,5 +1,5 @@
 # I'm only targeting Linux currently, and this project is only COMPATIBLE with
-# POSIX targets due to the dependency on `/usr/bin/br`, so silence warnings
+# POSIX targets due to the dependency on `/usr/local/bin/pycm19a.py`, so silence warnings
 # about transitive dependencies specific to other targets.
 targets = [
     { triple = "i686-unknown-linux-gnu" },
