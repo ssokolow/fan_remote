@@ -15,17 +15,17 @@ BindReadOnlyPaths=/usr/local/bin/fan_remote /usr/local/bin/pycm19a.py
 CapabilityBoundingSet=
 CPUQuota=20%
 #DevicePolicy=closed
-DeviceAllow=char-usb/* char-usb_device/*
+#DeviceAllow=char-usb/* char-usb_device/*
 DynamicUser=yes
 Environment=
-ExecPaths=/bin /usr/bin /usr/local/bin
+#ExecPaths=/bin /usr/bin /usr/local/bin
 IPAddressDeny=any
 KeyringMode=private
 LockPersonality=yes
 MemoryDenyWriteExecute=yes
 MemoryMax=512M
 Nice=10
-NoExecPaths=/
+#NoExecPaths=/
 NoNewPrivileges=yes
 PassEnvironment=
 #PrivateDevices=yes
@@ -62,7 +62,7 @@ UMask=0077
 
 # All irrelevant paths not covered by Private* options that the FHS says we
 # should be able to rely on existing (systemd will error out if one doesn't)
-InaccessiblePaths=/boot /etc /media /mnt /opt /sbin /srv /usr/include /usr/libexec /usr/sbin /usr/share /usr/src /var
+InaccessiblePaths=/boot /media /mnt /opt /srv /usr/include /usr/share /usr/src /var
 
 # Remaining `systemd-analyze security` concerns:
 # - I haven't figured out what DeviceAllow I'm missing to get libusb to work

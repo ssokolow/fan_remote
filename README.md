@@ -16,7 +16,7 @@ please let me know.
 Here's what `systemd-analyze security` has to say about it as of this writing:
 
 ```none
-  NAME                                                        DESCRIPTION                                                                   EXPOSURE
+  NAME                                                        DESCRIPTION                                                                    EXPOSURE
 ✓ PrivateNetwork=                                             Service has no access to the host's network
 ✓ User=/DynamicUser=                                          Service runs under a transient non-root user identity
 ✓ CapabilityBoundingSet=~CAP_SET(UID|GID|PCAP)                Service cannot change UID/GID identities/capabilities
@@ -28,37 +28,38 @@ Here's what `systemd-analyze security` has to say about it as of this writing:
 ✓ CapabilityBoundingSet=~CAP_(CHOWN|FSETID|SETFCAP)           Service cannot change file ownership/access mode/capabilities
 ✓ CapabilityBoundingSet=~CAP_(DAC_*|FOWNER|IPC_OWNER)         Service cannot override UNIX file/IPC permission checks
 ✓ CapabilityBoundingSet=~CAP_NET_ADMIN                        Service has no network configuration privileges
-✓ CapabilityBoundingSet=~CAP_RAWIO                            Service has no raw I/O access
 ✓ CapabilityBoundingSet=~CAP_SYS_MODULE                       Service cannot load kernel modules
+✓ CapabilityBoundingSet=~CAP_SYS_RAWIO                        Service has no raw I/O access
 ✓ CapabilityBoundingSet=~CAP_SYS_TIME                         Service processes cannot change the system clock
-✗ DeviceAllow=                                                Service has no device ACL                                                          0.2
+✗ DeviceAllow=                                                Service has no device ACL                                                           0.2
 ✓ IPAddressDeny=                                              Service blocks all IP address ranges
 ✓ KeyringMode=                                                Service doesn't share key material with other services
 ✓ NoNewPrivileges=                                            Service processes cannot acquire new privileges
 ✓ NotifyAccess=                                               Service child processes cannot alter service state
-✗ PrivateDevices=                                             Service potentially has access to hardware devices                                 0.2
+✗ PrivateDevices=                                             Service potentially has access to hardware devices                                  0.2
 ✓ PrivateMounts=                                              Service cannot install system mounts
 ✓ PrivateTmp=                                                 Service has no access to other software's temporary files
 ✓ PrivateUsers=                                               Service does not have access to other users
-✗ ProtectClock=                                               Service may write to the hardware clock or system clock                            0.2
+✗ ProtectClock=                                               Service may write to the hardware clock or system clock                             0.2
 ✓ ProtectControlGroups=                                       Service cannot modify the control group file system
 ✓ ProtectHome=                                                Service has no access to home directories
 ✓ ProtectKernelLogs=                                          Service cannot read from or write to the kernel log ring buffer
 ✓ ProtectKernelModules=                                       Service cannot load or read kernel modules
 ✓ ProtectKernelTunables=                                      Service cannot alter kernel tunables (/proc/sys, …)
+✓ ProtectProc=                                                Service has restricted access to process tree (/proc hidepid=)
 ✓ ProtectSystem=                                              Service has strict read-only access to the OS file hierarchy
 ✓ RestrictAddressFamilies=~AF_PACKET                          Service cannot allocate packet sockets
 ✓ RestrictSUIDSGID=                                           SUID/SGID file creation by service is restricted
 ✓ SystemCallArchitectures=                                    Service may execute system calls only with native ABI
-✓ SystemCallFilter=~@clock                                    System call whitelist defined for service, and @clock is not included
-✓ SystemCallFilter=~@debug                                    System call whitelist defined for service, and @debug is not included
-✓ SystemCallFilter=~@module                                   System call whitelist defined for service, and @module is not included
-✓ SystemCallFilter=~@mount                                    System call whitelist defined for service, and @mount is not included
-✓ SystemCallFilter=~@raw-io                                   System call whitelist defined for service, and @raw-io is not included
-✓ SystemCallFilter=~@reboot                                   System call whitelist defined for service, and @reboot is not included
-✓ SystemCallFilter=~@swap                                     System call whitelist defined for service, and @swap is not included
-✓ SystemCallFilter=~@privileged                               System call whitelist defined for service, and @privileged is not included
-✓ SystemCallFilter=~@resources                                System call whitelist defined for service, and @resources is not included
+✓ SystemCallFilter=~@clock                                    System call allow list defined for service, and @clock is not included
+✓ SystemCallFilter=~@debug                                    System call allow list defined for service, and @debug is not included
+✓ SystemCallFilter=~@module                                   System call allow list defined for service, and @module is not included
+✓ SystemCallFilter=~@mount                                    System call allow list defined for service, and @mount is not included
+✓ SystemCallFilter=~@raw-io                                   System call allow list defined for service, and @raw-io is not included
+✓ SystemCallFilter=~@reboot                                   System call allow list defined for service, and @reboot is not included
+✓ SystemCallFilter=~@swap                                     System call allow list defined for service, and @swap is not included
+✓ SystemCallFilter=~@privileged                               System call allow list defined for service, and @privileged is not included
+✓ SystemCallFilter=~@resources                                System call allow list defined for service, and @resources is not included
 ✓ AmbientCapabilities=                                        Service process does not receive ambient capabilities
 ✓ CapabilityBoundingSet=~CAP_AUDIT_*                          Service has no audit subsystem access
 ✓ CapabilityBoundingSet=~CAP_KILL                             Service cannot send UNIX signals to arbitrary processes
@@ -72,11 +73,11 @@ Here's what `systemd-analyze security` has to say about it as of this writing:
 ✓ RestrictNamespaces=~CLONE_NEWNS                             Service cannot create file system namespaces
 ✓ RestrictNamespaces=~CLONE_NEWPID                            Service cannot create process namespaces
 ✓ RestrictRealtime=                                           Service realtime scheduling access is restricted
-✓ SystemCallFilter=~@cpu-emulation                            System call whitelist defined for service, and @cpu-emulation is not included
-✓ SystemCallFilter=~@obsolete                                 System call whitelist defined for service, and @obsolete is not included
-✗ RestrictAddressFamilies=~AF_NETLINK                         Service may allocate netlink sockets                                               0.1
-✗ RootDirectory=/RootImage=                                   Service runs within the host's root directory                                      0.1
-✗ SupplementaryGroups=                                        Service runs with supplementary groups                                             0.1
+✓ SystemCallFilter=~@cpu-emulation                            System call allow list defined for service, and @cpu-emulation is not included
+✓ SystemCallFilter=~@obsolete                                 System call allow list defined for service, and @obsolete is not included
+✗ RestrictAddressFamilies=~AF_NETLINK                         Service may allocate netlink sockets                                                0.1
+✗ RootDirectory=/RootImage=                                   Service runs within the host's root directory                                       0.1
+✗ SupplementaryGroups=                                        Service runs with supplementary groups                                              0.1
 ✓ CapabilityBoundingSet=~CAP_MAC_*                            Service cannot adjust SMACK MAC
 ✓ CapabilityBoundingSet=~CAP_SYS_BOOT                         Service cannot issue reboot()
 ✓ Delegate=                                                   Service does not maintain its own delegated control group subtree
@@ -95,6 +96,7 @@ Here's what `systemd-analyze security` has to say about it as of this writing:
 ✓ CapabilityBoundingSet=~CAP_SYS_TTY_CONFIG                   Service cannot issue vhangup()
 ✓ CapabilityBoundingSet=~CAP_WAKE_ALARM                       Service cannot program timers that wake up the system
 ✓ RestrictAddressFamilies=~AF_UNIX                            Service cannot allocate local sockets
+✓ ProcSubset=                                                 Service has no access to non-process /proc files (/proc subset=)
 
 → Overall exposure level for fan_remote.service: 0.7 SAFE 😀
 ```
