@@ -12,13 +12,37 @@ thiserror = "1.0.56"
 notify-rust = { version = "4.10.0", optional = true }
 listenfd = "1.0.1"
 
+[profile.release]
+lto = true
+codegen-units = 1
+
+# Remove debug symbols from precompiled std to save space
+# and speed up linking time.
+# Backtraces will still work as long as you don't strip="symbols"/strip=true
+#
+# Source: https://davidlattimore.github.io/working-on-rust-iteration-time.html
+strip="debuginfo"
+
+# -- Combine reasonable rebuild time and reasonable perf in debug builds --
+# (Thanks to https://www.reddit.com/r/rust/comments/gvrgca/)
+# See also https://doc.rust-lang.org/cargo/reference/profiles.html#overrides
+
 [profile.dev.package."*"]
-# Set the default for dependencies in Development mode.
+# Build dependencies with full release optimizations in debug builds.
+# (Since they won't change often and probably do most of the heavy lifting)
 opt-level = 3
 
 [profile.dev]
-# Turn on a small amount of optimization in Development mode.
+# Build the project itself with just enough optimization to smooth out the
+# most egregious of the abstractions which are only zero-cost when optimized
 opt-level = 1
+
+# Disable building debug info and strip std debug symbols to speed up linking.
+# Backtraces will still work as long as you don't strip="symbols"/strip=true
+#
+# Source: https://davidlattimore.github.io/working-on-rust-iteration-time.html
+debug = 0
+strip="debuginfo"
 
 [features]
 default = ["notify-rust"]
