@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 actix-web = { version = "4.5.1", default-features = false }
 gumdrop = "0.8.1"
 thiserror = "1.0.59"
-notify-rust = { version = "4.10.0", optional = true }
+notify-rust = { version = "4.11.0", optional = true }
 listenfd = "1.0.1"
 
 [profile.release]
