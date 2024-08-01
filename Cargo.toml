@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 actix-web = { version = "4.8.0", default-features = false }
 gumdrop = "0.8.1"
-thiserror = "1.0.61"
+thiserror = "1.0.63"
 notify-rust = { version = "4.11.0", optional = true }
 listenfd = "1.0.1"
 
