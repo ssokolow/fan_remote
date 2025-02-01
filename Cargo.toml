@@ -10,7 +10,7 @@ actix-web = { version = "4.9.0", default-features = false }
 gumdrop = "0.8.1"
 thiserror = "2.0.3"
 notify-rust = { version = "4.11.3", optional = true }
-listenfd = "1.0.1"
+listenfd = "1.0.2"
 
 [profile.release]
 lto = true
