@@ -122,6 +122,12 @@ syscalls:
 - [Systemd socket based activation](https://web.archive.org/web/20210617031521/https://leonardoce.wordpress.com/2015/03/08/systemd-socket-based-activation/)
 - [The `listenfd` crate for Rust](https://lib.rs/crates/listenfd)
 
+I've also since found these useful resources which may help with hardening
+_other people's_ unit files:
+
+- [How to harden a systemd service unit](https://linux-audit.com/systemd/how-to-harden-a-systemd-service-unit/)
+- [Credentials - systemd.io](https://systemd.io/CREDENTIALS/)
+
 ...and, if you're a novice at or newcomer to writing unit files, you may find
 this helpful:
 

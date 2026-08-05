@@ -4,7 +4,7 @@ use std::process::Command;
 
 use actix_web::{error, rt, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web::middleware::NormalizePath;
-use gumdrop::Options;
+use bpaf::Bpaf;
 use listenfd::ListenFd;
 use thiserror::Error;
 
@@ -27,9 +27,9 @@ pub enum CmdArgError {
 ///
 /// Gumdrop is an acceptable argument parser in this case, because the only paths it needs to
 /// handle are so unlikely to contain non-UTF8 elements.
-fn parse_path(s: &str) -> Result<String, CmdArgError> {
+fn parse_path(s: String) -> Result<String, CmdArgError> {
     let string = s.to_owned();
-    let path = Path::new(s);
+    let path = Path::new(&s);
     if path.exists() && !path.is_dir() { // is_file() would false out on device nodes
         Ok(string)
     } else {
@@ -38,7 +38,7 @@ fn parse_path(s: &str) -> Result<String, CmdArgError> {
 }
 
 /// Parser/validator for X10 house codes
-fn parse_house_code(s: &str) -> Result<String, CmdArgError> {
+fn parse_house_code(s: String) -> Result<String, CmdArgError> {
     let code = s.to_uppercase();
     if let Some(code_char) = code.chars().next() {
         if code.len() == 1 && code_char >= 'A' && code_char <= 'P' {
@@ -49,39 +49,36 @@ fn parse_house_code(s: &str) -> Result<String, CmdArgError> {
 }
 
 /// Parser/validator for X10 device numbers
-fn parse_device_num(s: &str) -> Result<u8, CmdArgError> {
-    if let Ok(num) = s.parse() {
-        if num >= 1 && num <= 16 {
-            return Ok(num)
-        }
+fn parse_device_num(num: u8) -> Result<u8, CmdArgError> {
+    if num >= 1 && num <= 16 {
+        return Ok(num)
     }
-    Err(CmdArgError::BadDeviceNumber(s.to_owned()))
+    Err(CmdArgError::BadDeviceNumber(num.to_string()))
 }
 
-#[derive(Clone, Debug, Options)]
+#[derive(Clone, Debug, Bpaf)]
+#[bpaf(options)]
 struct CmdArgs {
-    /// Show this help output
-    help: bool,
-
     /// Path to the PyCM19A binary
-    #[options(meta = "PATH", default = "/usr/local/bin/pycm19a.py",
-        parse(try_from_str = "parse_path"))]
+    #[bpaf(long, argument("PATH"), fallback("/usr/local/bin/pycm19a.py".to_string()),
+        display_fallback, parse(parse_path))]
     pycm19a_path: String,
 
     /// X10 house code to pass to PyCM19A
-    #[options(meta = "X", default="A", parse(try_from_str = "parse_house_code"))]
+    #[bpaf(short, long, argument("X"), fallback("A".to_string()), display_fallback,
+        parse(parse_house_code))]
     house: String,
 
     /// X10 device number for "Turn off fan" button
-    #[options(meta = "N", default="1", parse(try_from_str = "parse_device_num"))]
+    #[bpaf(short, long, argument("N"), fallback(1), display_fallback, parse(parse_device_num))]
     fan_id: u8,
 
     /// Port to listen for HTTP connections on
-    #[options(meta = "N", default="8000")]
+    #[bpaf(short, long, argument("N"), fallback(8000), display_fallback)]
     port: u16,
 
     /// Number of times to repeat the X10 command to account for noisy/unreliable transmission
-    #[options(meta = "N", default="4")]
+    #[bpaf(short, long, argument("N"), fallback(4), display_fallback)]
     repeats: u8,
 }
 
@@ -182,7 +179,7 @@ async fn fan_off(req: HttpRequest, data: web::Data<CmdArgs>) -> impl Responder {
 }
 
 fn main() -> std::io::Result<()> {
-    let opts = CmdArgs::parse_args_default_or_exit();
+    let opts = cmd_args().run();
 
     let port = opts.port;
     let mut server = HttpServer::new(move || {
