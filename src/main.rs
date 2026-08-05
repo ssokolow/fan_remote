@@ -25,7 +25,7 @@ pub enum CmdArgError {
 /// would be much more work for little benefit in a long-running process.
 /// (You need to expect to handle failures at the point of use anyway.)
 ///
-/// Gumdrop is an acceptable argument parser in this case, because the only paths it needs to
+/// Bpaf is an acceptable argument parser in this case, because the only paths it needs to
 /// handle are so unlikely to contain non-UTF8 elements.
 fn parse_path(s: String) -> Result<String, CmdArgError> {
     let string = s.to_owned();
